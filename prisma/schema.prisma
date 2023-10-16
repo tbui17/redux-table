@@ -1,0 +1,306 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
+}
+
+generator zod {
+  provider              = "zod-prisma"
+  output                = "../src/models/prismaZod"
+  relationModel         = "true"
+  prismaJsonNullability = "true"
+  modelSuffix           = "Schema"
+  useDecimalJs          = "true"
+  modelCase             = "camelCase"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model unstructured_storage {
+  id         BigInt   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  name       String   @default("")
+  text       String   @default("")
+  tags       String[] @default([])
+  json       Json?
+}
+
+model webhooks {
+  id                  String                @id
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  name                String                @default("")
+  url                 String                @unique
+  discord_channel_id  String
+  token               String?               @unique
+  reminders           reminders[]
+  reminders_duplicate reminders_duplicate[]
+  discord_channels    discord_channels      @relation(fields: [discord_channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model countries {
+  id         BigInt      @id(map: "countries_pkey2") @default(autoincrement())
+  name       String?
+  iso2       String
+  iso3       String?
+  local_name String?
+  continent  continents?
+  flag       String?
+}
+
+model discord_channels {
+  id                  String                @id
+  name                String                @default("")
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  discord_guild_id    String
+  discord_guilds      discord_guilds       @relation(fields: [discord_guild_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  discord_messages    discord_messages[]
+  reminders           reminders[]
+  reminders_duplicate reminders_duplicate[]
+  webhooks            webhooks[]
+}
+
+model reminders {
+  created_at       DateTime         @default(now()) @db.Timestamptz(6)
+  user_id          String
+  channel_id       String
+  reminder_message String           @default("")
+  webhook_id       String
+  id               Int              @id @default(autoincrement())
+  time             DateTime         @db.Timestamptz(6)
+  discord_channels discord_channels @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  discord_user     discord_user     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  webhook          webhooks         @relation(fields: [webhook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model discord_user {
+  id                    String                @id @unique
+  created_at            DateTime              @default(now()) @db.Timestamptz(6)
+  username              String?               @default("")
+  timezone_id           BigInt?
+  discord_guilds        discord_guilds[]
+  discord_messages      discord_messages[]
+  timezones             timezones?            @relation(fields: [timezone_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reminders             reminders[]
+  reminders_duplicate   reminders_duplicate[]
+  discord_guilds_joined discord_guilds[]      @relation("discord_guilds_members")
+}
+
+model discord_guilds {
+  id                         String                       @id
+  created_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  name                       String                       @default("")
+  owner_id                   String?
+  iconURL                    String?
+  discord_channels           discord_channels[]
+  discord_channels_duplicate discord_channels_duplicate[]
+  discord_user               discord_user?                @relation(fields: [owner_id], references: [id])
+  discord_messages           discord_messages[]
+  members                    discord_user[]               @relation("discord_guilds_members")
+}
+
+model discord_messages {
+  id                 String            @id
+  created_at         DateTime          @default(now()) @db.Timestamptz(6)
+  text               String            @default("")
+  discord_channel_id String?
+  discord_guild_id   String?
+  owner_id           String?
+  discord_channels   discord_channels? @relation(fields: [discord_channel_id], references: [id], onUpdate: NoAction)
+  discord_guilds     discord_guilds?   @relation(fields: [discord_guild_id], references: [id], onUpdate: NoAction)
+  discord_user       discord_user?     @relation(fields: [owner_id], references: [id], onUpdate: NoAction)
+}
+
+model languages {
+  id                     BigInt                @id @default(autoincrement())
+  created_at             DateTime              @default(now()) @db.Timestamptz(6)
+  name                   String                @unique
+  iso_639_1              String                @unique
+  iso_639_2              String                @unique
+  is_supported_by_deep_l Boolean?              @default(false)
+  discord_flag_emojis    discord_flag_emojis[]
+}
+
+model test_countries {
+  id         BigInt  @id(map: "countries_pkey") @default(autoincrement())
+  name       String?
+  iso2       String
+  iso3       String?
+  local_name String?
+}
+
+model test_table {
+  id         BigInt   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  name       String?  @default("") @db.VarChar
+  value      BigInt?  @default(0)
+  text       String?  @default("")
+}
+
+model timezones {
+  id                     BigInt                   @id @unique @default(autoincrement())
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  label                  String
+  description            String
+  emoji                  String
+  value                  String
+  discord_user           discord_user[]
+  discord_user_duplicate discord_user_duplicate[]
+}
+
+model logs {
+  id          BigInt   @id @default(autoincrement())
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  level       Int      @default(6) @db.SmallInt
+  message     String   @default("")
+  json        Json?
+  tags        String[] @default([])
+  unsafe_json Json?
+}
+
+model countries_old {
+  id          BigInt   @id(map: "countries_pkey1") @default(autoincrement())
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  name        String   @unique(map: "countries_name_key")
+  flag_emoji  String?  @unique(map: "countries_flag_emoji_key")
+  language_id BigInt?
+}
+
+model rest_countries_api_data {
+  id           Int      @id(map: "RestCountriesAPIData_pkey") @default(autoincrement())
+  cca2         String
+  ccn3         String?
+  cca3         String
+  cioc         String?
+  independent  Boolean?
+  unMember     Boolean
+  capital      String[]
+  altSpellings String[]
+  subregion    String?
+  languages    Json?
+  translations Json
+  latlng       Float[]
+  landlocked   Boolean
+  borders      String[]
+  area         Float
+  flag         String
+  population   Int
+  gini         Json?
+  fifa         String?
+  timezones    String[]
+  capitalInfo  Json
+  car          Json
+  coatOfArms   Json
+  flags        Json
+  idd          Json
+  maps         Json
+  name         Json
+  postalCode   Json?
+  status       String
+  region       Json
+  continents   Json[]
+  startOfWeek  Json
+  currencies   Json?
+  demonyms     Json?
+}
+
+model discord_flag_emojis {
+  id          BigInt     @id @default(autoincrement())
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  value       String     @unique
+  languagesId BigInt?
+  language    languages? @relation(fields: [languagesId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model test_pagination {
+  id         BigInt   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  name       String?  @default("")
+  value      BigInt?  @default(0)
+  text       String?  @default("")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  providerAccountId String
+  access_token      String?
+  expires_at        Int?
+  id_token          String?
+  provider          String
+  refresh_token     String?
+  scope             String?
+  session_state     String?
+  token_type        String?
+  type              String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  expires      DateTime
+  sessionToken String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model discord_channels_duplicate {
+  id               String          @id
+  name             String          @default("")
+  created_at       DateTime        @default(now()) @db.Timestamptz(6)
+  discord_guild_id String
+  discord_guilds   discord_guilds @relation(fields: [discord_guild_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model discord_user_duplicate {
+  id          String     @id @unique(map: "discord_user_duplicate_id_idx")
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  username    String?    @default("")
+  timezone_id BigInt?
+  timezones   timezones? @relation(fields: [timezone_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reminders_duplicate {
+  created_at       DateTime         @default(now()) @db.Timestamptz(6)
+  user_id          String
+  channel_id       String
+  reminder_message String           @default("")
+  webhook_id       String
+  id               Int              @id @default(autoincrement())
+  time             DateTime         @db.Timestamptz(6)
+  discord_channels discord_channels @relation(fields: [channel_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  discord_user     discord_user     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  webhooks         webhooks         @relation(fields: [webhook_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+enum continents {
+  Africa
+  Antarctica
+  Asia
+  Europe
+  Oceania
+  North_America @map("North America")
+  South_America @map("South America")
+}

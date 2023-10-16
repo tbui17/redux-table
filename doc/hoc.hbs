@@ -1,0 +1,24 @@
+import { memo } from "react"
+import type { WrappedComponent, PropsAreEqual, HocReturn } from "../../types/types"
+
+/** https://react-typescript-cheatsheet.netlify.app/docs/hoc/ */
+const withSampleHoC = <P extends object>(
+	Component: WrappedComponent<P>,
+	propsAreEqual?: PropsAreEqual<P> | false,
+
+	componentName = Component.displayName ?? Component.name
+): HocReturn<P> => {
+	function WithSampleHoc(props: P) {
+		//Do something special to justify the HoC.
+		return <Component {...props} />
+	}
+
+	WithSampleHoc.displayName = `withSampleHoC(${componentName})`
+
+	const wrappedComponent =
+		propsAreEqual === false ? WithSampleHoc : memo(WithSampleHoc, propsAreEqual)
+
+	//copyStaticProperties(component, wrappedComponent);
+
+	return wrappedComponent as typeof WithSampleHoc
+}

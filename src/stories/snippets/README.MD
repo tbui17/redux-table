@@ -1,0 +1,1 @@
+Copy and paste the html for these templates to get started from a base template quickly.
